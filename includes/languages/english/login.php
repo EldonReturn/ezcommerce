@@ -22,6 +22,7 @@ define('TEXT_RETURNING_CUSTOMER', 'I am a returning customer.');
 
 define('TEXT_PASSWORD_FORGOTTEN', 'Password forgotten? Click here.');
 
+define('TEXT_LOGIN_CAPTCHA_ERROR', 'Error: Capthca is incorrect.');
 define('TEXT_LOGIN_ERROR', 'Error: No match for E-Mail Address and/or Password.');
 define('TEXT_VISITORS_CART', '<font color="#ff0000"><strong>Note:</strong></font> Your &quot;Visitors Cart&quot; contents will be merged with your &quot;Members Cart&quot; contents once you have logged on. <a href="javascript:session_win();">[More Info]</a>');
 ?>

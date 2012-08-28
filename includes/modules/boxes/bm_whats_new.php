@@ -31,9 +31,9 @@
     }
 
     function execute() {
-      global $currencies, $oscTemplate;
+      global $currencies, $oscTemplate, $languages_id;
 
-      if ($random_product = tep_random_select("select products_id, products_image, products_tax_class_id, products_price from " . TABLE_PRODUCTS . " where products_status = '1' order by products_date_added desc limit " . MAX_RANDOM_SELECT_NEW)) {
+      if ($random_product = tep_random_select("select p.products_id, p.products_image, p.products_tax_class_id, p.products_price from " . TABLE_PRODUCTS . " p, " . TABLE_PRODUCTS_DESCRIPTION . " pd where p.products_id = pd.products_id and p.products_status = '1' and pd.language_id = " . (int)$languages_id . " order by p.products_date_added desc limit " . MAX_RANDOM_SELECT_NEW)) {
         $random_product['products_name'] = tep_get_products_name($random_product['products_id']);
         $random_product['specials_new_products_price'] = tep_get_products_special_price($random_product['products_id']);
 
@@ -48,9 +48,13 @@
                 '  <div class="ui-widget-header infoBoxHeading"><a href="' . tep_href_link(FILENAME_PRODUCTS_NEW) . '">' . MODULE_BOXES_WHATS_NEW_BOX_TITLE . '</a></div>' .
                 '  <div class="ui-widget-content infoBoxContents" style="text-align: center;"><a href="' . tep_href_link(FILENAME_PRODUCT_INFO, 'products_id=' . $random_product['products_id']) . '">' . tep_image(DIR_WS_IMAGES . $random_product['products_image'], $random_product['products_name'], SMALL_IMAGE_WIDTH, SMALL_IMAGE_HEIGHT) . '</a><br /><a href="' . tep_href_link(FILENAME_PRODUCT_INFO, 'products_id=' . $random_product['products_id']) . '">' . $random_product['products_name'] . '</a><br />' . $whats_new_price . '</div>' .
                 '</div>';
-
-        $oscTemplate->addBlock($data, $this->group);
+      }else{
+      	$data = '<div class="ui-widget infoBoxContainer">' .
+        	    '  <div class="ui-widget-header infoBoxHeading"><a href="' . tep_href_link(FILENAME_PRODUCTS_NEW) . '">' . MODULE_BOXES_WHATS_NEW_BOX_TITLE . '</a></div>' .
+      			'  <div class="ui-widget-content infoBoxContents" style="text-align: center;">' . MODULE_BOXES_WAHTS_NEW_EMPTY_CONTENT . '</div>' .
+      			'</div>';
       }
+      $oscTemplate->addBlock($data, $this->group);
     }
 
     function isEnabled() {

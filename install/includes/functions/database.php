@@ -26,7 +26,9 @@
   }
 
   function osc_db_select_db($database) {
-    return mysql_select_db($database);
+  	$rc = mysql_select_db($database);
+  	mysql_query('set names ' . (defined('CHARSET') ? CHARSET : 'utf8'));
+    return $rc;
   }
 
   function osc_db_query($query, $link = 'db_link') {

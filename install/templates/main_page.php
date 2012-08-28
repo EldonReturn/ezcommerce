@@ -18,6 +18,7 @@
 
 <title>osCommerce, Open Source E-Commerce Solutions</title>
 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="robots" content="noindex,nofollow">
 
 <link rel="stylesheet" type="text/css" href="templates/main_page/stylesheet.css">

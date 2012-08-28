@@ -447,9 +447,9 @@
 
 // include the breadcrumb class and start the breadcrumb trail
   require(DIR_WS_CLASSES . 'breadcrumb.php');
-  $breadcrumb = new breadcrumb;
+  $breadcrumb = new breadcrumb();
 
-  $breadcrumb->add(HEADER_TITLE_TOP, HTTP_SERVER);
+  $breadcrumb->add(HEADER_TITLE_TOP, HTTP_SERVER . (ENABLE_SSL ? DIR_WS_HTTPS_CATALOG : DIR_WS_HTTP_CATALOG));
   $breadcrumb->add(HEADER_TITLE_CATALOG, tep_href_link(FILENAME_DEFAULT));
 
 // add category names or the manufacturer name to the breadcrumb trail

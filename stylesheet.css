@@ -103,6 +103,10 @@ body {
   line-height: 1.5;
 }
 
+.captchaField {
+	vertical-align:middle;
+}
+
 h1 {
   font-size: 20px;
   margin-bottom: 0;

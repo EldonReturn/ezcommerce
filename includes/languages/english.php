@@ -160,6 +160,7 @@ define('ENTRY_PASSWORD_NEW_TEXT', '*');
 define('ENTRY_PASSWORD_NEW_ERROR', 'Your new Password must contain a minimum of ' . ENTRY_PASSWORD_MIN_LENGTH . ' characters.');
 define('ENTRY_PASSWORD_NEW_ERROR_NOT_MATCHING', 'The Password Confirmation must match your new Password.');
 define('PASSWORD_HIDDEN', '--HIDDEN--');
+define('ENTRY_CAPTCHA', 'Captcha:');
 
 define('FORM_REQUIRED_INFORMATION', '* Required information');
 

@@ -32,7 +32,13 @@
 
     function tep_show_category($counter) {
       global $tree, $categories_string, $cPath_array;
-
+      
+      if(!tep_not_null($counter)){
+      	// No category
+      	$categories_string = MODULE_BOXES_CATEGORIES_NO_CATEGORIES;
+      	return;
+      }
+      
       for ($i=0; $i<$tree[$counter]['level']; $i++) {
         $categories_string .= "&nbsp;&nbsp;";
       }

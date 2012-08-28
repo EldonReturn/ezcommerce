@@ -19,7 +19,10 @@
       $$link = mysql_connect($server, $username, $password);
     }
 
-    if ($$link) mysql_select_db($database);
+    if ($$link){
+    	mysql_select_db($database);
+    	mysql_query('set names ' . (defined('CHARSET') ? CHARSET : 'utf8'));
+    }
 
     return $$link;
   }

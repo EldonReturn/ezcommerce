@@ -165,7 +165,7 @@
 
 ////
 // Output a form input field
-  function tep_draw_input_field($name, $value = '', $parameters = '', $type = 'text', $reinsert_value = true) {
+  function tep_draw_input_field($name, $value = '', $parameters = '', $type = 'text', $reinsert_value = true, $size = '') {
     global $HTTP_GET_VARS, $HTTP_POST_VARS;
 
     $field = '<input type="' . tep_output_string($type) . '" name="' . tep_output_string($name) . '"';
