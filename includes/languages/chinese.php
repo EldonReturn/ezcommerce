@@ -116,7 +116,7 @@ define('ENTRY_DATE_OF_BIRTH_ERROR', '您的出生日期必须是以下格式：�
 define('ENTRY_DATE_OF_BIRTH_TEXT', '*(例：05/21/1970)');
 define('ENTRY_EMAIL_ADDRESS', '电子邮件：');
 define('ENTRY_EMAIL_ADDRESS_ERROR', '您的电子邮件地址不能少于 ' . ENTRY_EMAIL_ADDRESS_MIN_LENGTH . ' 个字');
-define('ENTRY_EMAIL_ADDRESS_CHECK_ERROR', '您的电子邮件地址不对 - 请坐必要修改。');
+define('ENTRY_EMAIL_ADDRESS_CHECK_ERROR', '您的电子邮件地址不对 - 请作必要修改。');
 define('ENTRY_EMAIL_ADDRESS_ERROR_EXISTS', '这个电子邮件地址已经注册过 - 请用该地址登录或用别的地址重新注册。');
 define('ENTRY_EMAIL_ADDRESS_TEXT', '*');
 define('ENTRY_STREET_ADDRESS', '街道门牌号码：');

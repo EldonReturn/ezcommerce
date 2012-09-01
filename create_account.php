@@ -19,6 +19,8 @@
   if (isset($HTTP_POST_VARS['action']) && ($HTTP_POST_VARS['action'] == 'process') && isset($HTTP_POST_VARS['formid']) && ($HTTP_POST_VARS['formid'] == $sessiontoken)) {
     $process = true;
 
+    $captcha = tep_db_prepare_input($HTTP_POST_VARS['captcha']);
+    
     if (ACCOUNT_GENDER == 'true') {
       if (isset($HTTP_POST_VARS['gender'])) {
         $gender = tep_db_prepare_input($HTTP_POST_VARS['gender']);
@@ -55,6 +57,11 @@
     $confirmation = tep_db_prepare_input($HTTP_POST_VARS['confirmation']);
 
     $error = false;
+    
+    if($cpt != $captcha){
+    	$error = true;
+    	$messageStack->add('create_account', TEXT_CAPTCHA_ERROR);
+    }
 
     if (ACCOUNT_GENDER == 'true') {
       if ( ($gender != 'm') && ($gender != 'f') ) {
@@ -440,6 +447,10 @@
       <tr>
         <td class="fieldKey"><?php echo ENTRY_PASSWORD_CONFIRMATION; ?></td>
         <td class="fieldValue"><?php echo tep_draw_password_field('confirmation') . '&nbsp;' . (tep_not_null(ENTRY_PASSWORD_CONFIRMATION_TEXT) ? '<span class="inputRequirement">' . ENTRY_PASSWORD_CONFIRMATION_TEXT . '</span>': ''); ?></td>
+      </tr>
+      <tr>
+        <td class="fieldKey"><?php echo ENTRY_CAPTCHA; ?></td>
+        <td class="fieldValue"><?php echo tep_draw_input_field('captcha', '', 'size=4 class="captchaField"'); ?><img class="captchaField" src="captcha_generate.php" /></td>
       </tr>
     </table>
   </div>

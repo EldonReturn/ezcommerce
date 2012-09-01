@@ -49,8 +49,8 @@ class captcha{
 			$start = rand(1,strlen($str) - 1);
 			$randnum .= substr($str,$start,1);
 		}
-		$this->randnum = strtolower($randnum); // Case insensitive
-		$_SESSION[CPT] = $this->randnum;
+		$this->randnum = $randnum;
+		$_SESSION[CPT] = strtolower($this->randnum); // Case insensitive
 	}
 	// Get the y axis of the captcha
 	function get_y(){

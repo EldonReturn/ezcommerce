@@ -15,6 +15,8 @@ define('HEADING_TITLE', '创建账户');
 
 define('TEXT_ORIGIN_LOGIN', '<font color="#FF0000"><small><strong>小提示:</strong></small></font> 如果您已经注册, 请点 <a href="%s"><u>这里</u></a> 登陆.');
 
+define('TEXT_CAPTCHA_ERROR', '错误：验证码输入错误。');
+
 define('EMAIL_SUBJECT', STORE_NAME.'会员注册成功通知');
 define('EMAIL_GREET_MR', '尊敬的 %s 先生,' . "\n\n");
 define('EMAIL_GREET_MS', '尊敬的 %s 女士' . "\n\n");
