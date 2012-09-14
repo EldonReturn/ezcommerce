@@ -17,7 +17,7 @@ define('TEXT_ORIGIN_LOGIN', '<font color="#FF0000"><small><strong>小提示:</st
 
 define('TEXT_CAPTCHA_ERROR', '错误：验证码输入错误。');
 
-define('EMAIL_SUBJECT', STORE_NAME.'会员注册成功通知');
+define('EMAIL_SUBJECT', STORE_NAME.' 会员注册成功通知');
 define('EMAIL_GREET_MR', '尊敬的 %s 先生,' . "\n\n");
 define('EMAIL_GREET_MS', '尊敬的 %s 女士' . "\n\n");
 define('EMAIL_GREET_NONE', '尊敬的 %s' . "\n\n");

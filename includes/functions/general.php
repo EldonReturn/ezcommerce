@@ -1035,20 +1035,39 @@
   function tep_mail($to_name, $to_email_address, $email_subject, $email_text, $from_email_name, $from_email_address) {
     if (SEND_EMAILS != 'true') return false;
 
-    // Instantiate a new mail object
-    $message = new email(array('X-Mailer: osCommerce'));
+	// Use PHPMailer class instead
+	$mail = new PHPMailer();
+	$mail->PluginDir = DIR_WS_CLASSES;
+	
+	$mail->IsSMTP();
+	$mail->Host = SMTP_SERVER;
+	$mail->SMTPAuth = (REQUIRE_AUTH == 'true' ? true : false);
+	if(SMTP_SSL == 'true') $mail->SMTPSecure = 'ssl';
+	$mail->Port = tep_not_null(SMTP_PORT) ? SMTP_PORT : (SMTP_SSL == 'true' ? 465 : 25);
+	$mail->Username = SMTP_ACCOUNT_NAME;
+	$mail->Password = SMTP_ACCOUNT_PASSWORD;
+	
+	$mail->SetFrom($from_email_address, $from_email_name);
+	$mail->Subject = $email_subject;
+	$mail->MsgHTML(eregi_replace("[\]",'', $email_text));
+	$mail->AddAddress($to_email_address, $to_name);
+	
+	@$mail->Send();
+    
+//     // Instantiate a new mail object
+//     $message = new email(array('X-Mailer: osCommerce'));
 
-    // Build the text version
-    $text = strip_tags($email_text);
-    if (EMAIL_USE_HTML == 'true') {
-      $message->add_html($email_text, $text);
-    } else {
-      $message->add_text($text);
-    }
+//     // Build the text version
+//     $text = strip_tags($email_text);
+//     if (EMAIL_USE_HTML == 'true') {
+//       $message->add_html($email_text, $text);
+//     } else {
+//       $message->add_text($text);
+//     }
 
-    // Send message
-    $message->build_message();
-    $message->send($to_name, $to_email_address, $from_email_name, $from_email_address, $email_subject);
+//     // Send message
+//     $message->build_message();
+//     $message->send($to_name, $to_email_address, $from_email_name, $from_email_address, $email_subject);
   }
 
 ////

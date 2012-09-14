@@ -253,7 +253,7 @@
 
 // include the mail classes
   require(DIR_WS_CLASSES . 'mime.php');
-  require(DIR_WS_CLASSES . 'email.php');
+  require(DIR_WS_CLASSES . 'class.phpmailer.php');
 
 // set the language
   if (!tep_session_is_registered('language') || isset($HTTP_GET_VARS['language'])) {

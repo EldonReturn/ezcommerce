@@ -192,7 +192,7 @@
 
 // email classes
   require(DIR_WS_CLASSES . 'mime.php');
-  require(DIR_WS_CLASSES . 'email.php');
+  require(DIR_WS_CLASSES . 'class.phpmailer.php');
 
 // file uploading class
   require(DIR_WS_CLASSES . 'upload.php');
