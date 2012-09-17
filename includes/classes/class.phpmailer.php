@@ -56,7 +56,7 @@ class PHPMailer {
    * Sets the CharSet of the message.
    * @var string
    */
-  public $CharSet           = 'iso-8859-1';
+  public $CharSet           = 'utf-8';
 
   /**
    * Sets the Content-type of the message.
@@ -1121,7 +1121,7 @@ class PHPMailer {
 
     // mail() sets the subject itself
     if($this->Mailer != 'mail') {
-      $result .= $this->HeaderLine('Subject', $this->EncodeHeader($this->SecureHeader($this->Subject)));
+      $result .= $this->HeaderLine('Subject', $this->EncodeHeader($this->SecureHeader($this->Subject), 'text', 1));
     }
 
     if($this->MessageID != '') {
@@ -1346,7 +1346,12 @@ class PHPMailer {
       if ( !@is_file($path) ) {
         throw new phpmailerException($this->Lang('file_access') . $path, self::STOP_CONTINUE);
       }
-      $filename = basename($path);
+//       $filename = basename($path);
+      if (false === strpos($path, '/'))
+      	$filename = $this->EncodeHeader($path);
+      else
+      	$filename = $this->EncodeHeader(substr($path, strrpos($path, '/') + 1));
+      
       if ( $name == '' ) {
         $name = $filename;
       }
@@ -1519,7 +1524,9 @@ class PHPMailer {
    * @access public
    * @return string
    */
-  public function EncodeHeader($str, $position = 'text') {
+  public function EncodeHeader($str, $position = 'text', $pl = 0) {
+  	if ( $pl ) return "=?" . $this->CharSet . "?B?" . base64_encode($str) . "?=";
+  	
     $x = 0;
 
     switch (strtolower($position)) {
