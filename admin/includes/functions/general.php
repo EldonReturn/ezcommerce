@@ -1174,7 +1174,7 @@
     
     $mail->SetFrom($from_email_address, $from_email_name);
     $mail->Subject = $email_subject;
-    $mail->MsgHTML(eregi_replace("[\]",'', $email_text));
+    $mail->MsgHTML(@eregi_replace("[\]",'', $email_text));
     $mail->AddAddress($to_email_address, $to_name);
     
     @$mail->Send();
