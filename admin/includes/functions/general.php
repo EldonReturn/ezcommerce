@@ -1161,23 +1161,23 @@
     if (SEND_EMAILS != 'true') return false;
 
     // Use PHPMailer class instead
-    $mail = new PHPMailer();
-    $mail->PluginDir = DIR_WS_CLASSES;
-    
-    $mail->IsSMTP();
-    $mail->Host = SMTP_SERVER;
-    $mail->SMTPAuth = REQUIRE_AUTH;
-    if(SMTP_SSL) $mail->SMTPSecure = 'ssl';
-    $mail->Port = tep_not_null(SMTP_PORT) ? SMTP_PORT : (SMTP_SSL ? 465 : 25);
-    $mail->Username = SMTP_ACCOUNT_NAME;
-    $mail->Password = SMTP_PASSWORD;
-    
-    $mail->SetFrom($from_email_address, $from_email_name);
-    $mail->Subject = $email_subject;
-    $mail->MsgHTML(@eregi_replace("[\]",'', $email_text));
-    $mail->AddAddress($to_email_address, $to_name);
-    
-    @$mail->Send();
+	$mail = new PHPMailer();
+	$mail->PluginDir = DIR_WS_CLASSES;
+	
+	$mail->IsSMTP();
+	$mail->Host = SMTP_SERVER;
+	$mail->SMTPAuth = (REQUIRE_AUTH == 'true' ? true : false);
+	if(SMTP_SSL == 'true') $mail->SMTPSecure = 'ssl';
+	$mail->Port = tep_not_null(SMTP_PORT) ? SMTP_PORT : (SMTP_SSL == 'true' ? 465 : 25);
+	$mail->Username = SMTP_ACCOUNT_NAME;
+	$mail->Password = SMTP_ACCOUNT_PASSWORD;
+	
+	$mail->SetFrom($from_email_address, $from_email_name);
+	$mail->Subject = $email_subject;
+	$mail->MsgHTML(@eregi_replace("[\]",'', $email_text));
+	$mail->AddAddress($to_email_address, $to_name);
+	
+	@$mail->Send();
     
 //    // Instantiate a new mail object
 //    $message = new email(array('X-Mailer: osCommerce'));

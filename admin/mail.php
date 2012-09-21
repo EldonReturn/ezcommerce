@@ -32,25 +32,29 @@
         break;
     }
 
-    $from = tep_db_prepare_input($HTTP_POST_VARS['from']);
     $subject = tep_db_prepare_input($HTTP_POST_VARS['subject']);
     $message = tep_db_prepare_input($HTTP_POST_VARS['message']);
 
-    //Let's build a message object using the email class
-    $mimemessage = new email(array('X-Mailer: osCommerce'));
-
-    // Build the text version
-    $text = strip_tags($message);
-    if (EMAIL_USE_HTML == 'true') {
-      $mimemessage->add_html($message, $text);
-    } else {
-      $mimemessage->add_text($message);
+    // Use phpmailer instead
+    while($mail = tep_db_fetch_array($mail_query)){
+    	tep_mail($mail['customers_firstname'] . ' ' . $mail['customers_lastname'], $mail['customers_email_address'],
+    			$subject, $message, STORE_OWNER, SMTP_ACCOUNT_NAME);
     }
+//     //Let's build a message object using the email class
+//     $mimemessage = new email(array('X-Mailer: osCommerce'));
 
-    $mimemessage->build_message();
-    while ($mail = tep_db_fetch_array($mail_query)) {
-      $mimemessage->send($mail['customers_firstname'] . ' ' . $mail['customers_lastname'], $mail['customers_email_address'], '', $from, $subject);
-    }
+//     // Build the text version
+//     $text = strip_tags($message);
+//     if (EMAIL_USE_HTML == 'true') {
+//       $mimemessage->add_html($message, $text);
+//     } else {
+//       $mimemessage->add_text($message);
+//     }
+
+//     $mimemessage->build_message();
+//     while ($mail = tep_db_fetch_array($mail_query)) {
+//       $mimemessage->send($mail['customers_firstname'] . ' ' . $mail['customers_lastname'], $mail['customers_email_address'], '', $from, $subject);
+//     }
 
     tep_redirect(tep_href_link(FILENAME_MAIL, 'mail_sent_to=' . urlencode($mail_sent_to)));
   }
@@ -98,12 +102,6 @@
               </tr>
               <tr>
                 <td class="smallText"><strong><?php echo TEXT_CUSTOMER; ?></strong><br /><?php echo $mail_sent_to; ?></td>
-              </tr>
-              <tr>
-                <td><?php echo tep_draw_separator('pixel_trans.gif', '1', '10'); ?></td>
-              </tr>
-              <tr>
-                <td class="smallText"><strong><?php echo TEXT_FROM; ?></strong><br /><?php echo htmlspecialchars(stripslashes($HTTP_POST_VARS['from'])); ?></td>
               </tr>
               <tr>
                 <td><?php echo tep_draw_separator('pixel_trans.gif', '1', '10'); ?></td>
@@ -159,13 +157,6 @@
               <tr>
                 <td class="main"><?php echo TEXT_CUSTOMER; ?></td>
                 <td><?php echo tep_draw_pull_down_menu('customers_email_address', $customers, (isset($HTTP_GET_VARS['customer']) ? $HTTP_GET_VARS['customer'] : ''));?></td>
-              </tr>
-              <tr>
-                <td colspan="2"><?php echo tep_draw_separator('pixel_trans.gif', '1', '10'); ?></td>
-              </tr>
-              <tr>
-                <td class="main"><?php echo TEXT_FROM; ?></td>
-                <td><?php echo tep_draw_input_field('from', EMAIL_FROM); ?></td>
               </tr>
               <tr>
                 <td colspan="2"><?php echo tep_draw_separator('pixel_trans.gif', '1', '10'); ?></td>
