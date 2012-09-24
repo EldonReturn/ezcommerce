@@ -1,11 +1,5 @@
 
-.DS_Store
-
-admin/.DS_Store
-
-includes/.DS_Store
-
-admin/includes/.DS_Store
+*.DS_Store
 
 admin/includes/configure.php
 
