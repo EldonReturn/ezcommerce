@@ -6,3 +6,7 @@ admin/.DS_Store
 includes/.DS_Store
 
 admin/includes/.DS_Store
+
+admin/includes/configure.php
+
+includes/configure.php
