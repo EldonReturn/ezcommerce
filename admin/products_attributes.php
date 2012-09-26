@@ -18,8 +18,13 @@
   $option_page = (isset($HTTP_GET_VARS['option_page']) && is_numeric($HTTP_GET_VARS['option_page'])) ? $HTTP_GET_VARS['option_page'] : 1;
   $value_page = (isset($HTTP_GET_VARS['value_page']) && is_numeric($HTTP_GET_VARS['value_page'])) ? $HTTP_GET_VARS['value_page'] : 1;
   $attribute_page = (isset($HTTP_GET_VARS['attribute_page']) && is_numeric($HTTP_GET_VARS['attribute_page'])) ? $HTTP_GET_VARS['attribute_page'] : 1;
+  // dj: added to fix pagination issues
+  $file_group_page = (isset($HTTP_GET_VARS['file_group_page']) && is_numeric($HTTP_GET_VARS['file_group_page'])) ? $HTTP_GET_VARS['file_group_page'] : 1;
+  $group_file_page = (isset($HTTP_GET_VARS['group_file_page']) && is_numeric($HTTP_GET_VARS['group_file_page'])) ? $HTTP_GET_VARS['group_file_page'] : 1;
+  $order_by = (isset($HTTP_GET_VARS['order_by']) && is_string($HTTP_GET_VARS['order_by'])) ? $HTTP_GET_VARS['order_by'] : '';
 
-  $page_info = 'option_page=' . $option_page . '&value_page=' . $value_page . '&attribute_page=' . $attribute_page;
+  $page_info = 'option_page=' . $option_page . '&value_page=' . $value_page . '&attribute_page=' . $attribute_page .
+    '&file_group_page=' . $file_group_page . '&group_file_page=' . $group_file_page . '&order_by' . $order_by; // dl: added parms for file_group
 
   if (tep_not_null($action)) {
     switch ($action) {
@@ -65,13 +70,168 @@
           $products_attributes_maxdays = tep_db_prepare_input($HTTP_POST_VARS['products_attributes_maxdays']);
           $products_attributes_maxcount = tep_db_prepare_input($HTTP_POST_VARS['products_attributes_maxcount']);
 
-          if (tep_not_null($products_attributes_filename)) {
-            tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD . " values (" . (int)$products_attributes_id . ", '" . tep_db_input($products_attributes_filename) . "', '" . tep_db_input($products_attributes_maxdays) . "', '" . tep_db_input($products_attributes_maxcount) . "')");
+// BOF Super Download Shop v1.0 mod
+          if (DOWNLOADS_CONTROLLER_FILEGROUP_STATUS == 'Yes') {
+            $product_attribute_filegroup_id = tep_db_prepare_input($HTTP_POST_VARS['filegroup_id']);
+            if ($product_attribute_filegroup_id > 0) {
+              $products_attributes_filename = 'Group_Files-' . $product_attribute_filegroup_id;
+            } else {
+              if (strstr($products_attributes_filename, 'Group_Files-')) $products_attributes_filename = 'File_Not_Assigned';
+            }
+            if (tep_not_null($products_attributes_filename)) tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD . " values (" . (int)$products_attributes_id . ", '" . tep_db_input($products_attributes_filename) . "', '" . tep_db_input($product_attribute_filegroup_id) . "', '" . tep_db_input($products_attributes_maxdays) . "', '" . tep_db_input($products_attributes_maxcount) . "')");
+          } else if (tep_not_null($products_attributes_filename)) {
+            tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD . " values (" . (int)$products_attributes_id . ", '" . tep_db_input($products_attributes_filename) . "', '', '" . tep_db_input($products_attributes_maxdays) . "', '" . tep_db_input($products_attributes_maxcount) . "')");
           }
+// EOF Super Download Shop v1.0 mod
         }
 
         tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
         break;
+// BOF Super Download Shop v1.0 mod
+      case 'add_filegroups':
+        $filegroup_id = tep_db_prepare_input($HTTP_POST_VARS['filegroup_id']);
+        $file_group_array = $HTTP_POST_VARS['file_group_name'];
+        // check if any name given
+        $name_check = 0;
+        for ($i=0, $n=sizeof($languages); $i<$n; $i ++) {
+          if (!empty($file_group_array[$languages[$i]['id']])) $name_check = 1;
+        }
+
+        if (is_numeric($filegroup_id) && $name_check == 1) {
+          for ($i=0, $n=sizeof($languages); $i<$n; $i ++) {
+            $file_group_name = tep_db_prepare_input($file_group_array[$languages[$i]['id']]);
+
+            tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS . " (download_group_id, download_group_name, language_id) values ('" . (int)$filegroup_id . "', '" . tep_db_input($file_group_name) . "', '" . (int)$languages[$i]['id'] . "')");
+          }
+        }
+        tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
+        break;
+      case 'add_group_file':
+        $filegroup_id = tep_db_prepare_input($HTTP_POST_VARS['filegroup_id']);
+        $file_desc_array = $HTTP_POST_VARS['file_desc'];
+        $file_name = '';
+        if (isset($HTTP_POST_VARS['input_filename']) && !empty($HTTP_POST_VARS['input_filename'])) {
+          $file_name = tep_db_prepare_input($HTTP_POST_VARS['input_filename']);
+        }
+        if (tep_not_null($file_name) && file_exists(DIR_FS_CATALOG_DOWNLOAD . $file_name)) {
+          // check existing file and descriptions
+          $file_query = tep_db_query("select download_groups_file_id from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " where download_group_filename = '" . $file_name . "'");
+          if (tep_db_num_rows($file_query) > 0) {
+            $file_array = tep_db_fetch_array($file_query);
+            tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " (download_groups_file_id, download_group_id, download_group_filename) values ('" . (int)$file_array['download_groups_file_id'] . "', '" . (int)$filegroup_id . "', '" . tep_db_input($file_name) . "')");
+          } else {
+            tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " (download_group_id, download_group_filename) values ('" . (int)$filegroup_id . "', '" . tep_db_input($file_name) . "')");
+            $download_groups_file_id = tep_db_insert_id();
+
+            for ($i=0, $n=sizeof($languages); $i<$n; $i ++) {
+              $file_desc = tep_db_prepare_input($file_desc_array[$languages[$i]['id']]);
+              if (empty($file_desc)) $file_desc = tep_db_prepare_input(TEXT_TEMP_DESC . ' ' . $download_groups_file_id);
+
+              tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_TO_FILES . " (download_groups_file_id, language_id, download_group_file_description) values ('" . (int)$download_groups_file_id . "', '" . (int)$languages[$i]['id'] . "', '" . tep_db_input($file_desc) . "')");
+            }
+          }
+        } else {
+          if (!tep_not_null($file_name)) $messageStack->add_session(ERROR_NO_FILENAME, 'error');
+          else $messageStack->add_session(sprintf(ERROR_FILE_DOES_NOT_EXIST, $file_name), 'error');
+        }
+        tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
+        break;
+      case 'add_mass_files':
+        $filegroup_id = tep_db_prepare_input($HTTP_POST_VARS['filegroup_id']);
+        $file_selected = $HTTP_POST_VARS['file_selected'];
+        foreach($file_selected as $k => $file_name) {
+          if (tep_not_null($file_name)) {
+            $file_name = tep_db_prepare_input($file_name);
+            // check if file already in group
+            $file_check_query = tep_db_query("select * from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " where download_group_id = '" . (int)$filegroup_id . "' and download_group_filename = '" . $file_name . "'");
+            if (tep_db_num_rows($file_check_query) == 0) {
+              // check existing file and descriptions
+              $file_query = tep_db_query("select download_groups_file_id from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " where download_group_filename = '" . $file_name . "'");
+              if (tep_db_num_rows($file_query) > 0) {
+                $file_array = tep_db_fetch_array($file_query);
+                tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " (download_groups_file_id, download_group_id, download_group_filename) values ('" . (int)$file_array['download_groups_file_id'] . "', '" . (int)$filegroup_id . "', '" . tep_db_input($file_name) . "')");
+              } else {
+                tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " (download_group_id, download_group_filename) values ('" . (int)$filegroup_id . "', '" . tep_db_input($file_name) . "')");
+                $download_groups_file_id = tep_db_insert_id();
+
+                for ($i=0, $n=sizeof($languages); $i<$n; $i ++) {
+                  $file_desc = tep_db_prepare_input(TEXT_TEMP_DESC . ' ' . $download_groups_file_id);
+
+                  tep_db_query("insert into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_TO_FILES . " (download_groups_file_id, language_id, download_group_file_description) values ('" . (int)$download_groups_file_id . "', '" . (int)$languages[$i]['id'] . "', '" . tep_db_input($file_desc) . "')");
+                }
+              }
+            }
+          }
+        }
+        tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
+        break;
+      case 'update_filegroup_name':
+        $file_group_name_array = $HTTP_POST_VARS['file_group_name'];
+        $filegroup_id = tep_db_prepare_input($HTTP_POST_VARS['filegroup_id']);
+
+        for ($i=0, $n=sizeof($languages); $i<$n; $i ++) {
+          $file_group_name = tep_db_prepare_input($file_group_name_array[$languages[$i]['id']]);
+
+          tep_db_query("update " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS . " set download_group_name = '" . tep_db_input($file_group_name) . "' where download_group_id = '" . (int)$filegroup_id . "' and language_id = '" . (int)$languages[$i]['id'] . "'");
+        }
+
+        tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
+        break;
+      case 'update_file_desc':
+        $file_desc_array = $HTTP_POST_VARS['file_desc'];
+        $file_id = tep_db_prepare_input($HTTP_POST_VARS['file_id']);
+
+        for ($i=0, $n=sizeof($languages); $i<$n; $i ++) {
+          $file_desc = tep_db_prepare_input($file_desc_array[$languages[$i]['id']]);
+
+          tep_db_query("update " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_TO_FILES . " set download_group_file_description = '" . tep_db_input($file_desc) . "' where download_groups_file_id = '" . (int)$file_id . "' and language_id = '" . (int)$languages[$i]['id'] . "'");
+        }
+
+        tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
+        break;
+      case 'delete_download_group':
+        $filegroup_id = tep_db_prepare_input($HTTP_GET_VARS['filegroup_id']);
+
+        tep_db_query("delete from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS . " where download_group_id = '" . (int)$filegroup_id . "'");
+        // check files in other group
+        $files_query = tep_db_query("select download_groups_file_id from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " where download_group_id = '" . (int)$filegroup_id . "'");
+        while ($file_array = tep_db_fetch_array($files_query)) {
+          $file_check = tep_db_query("select download_groups_file_id from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " where download_group_id != '" . (int)$filegroup_id . "' and download_groups_file_id = '" . $file_array['download_groups_file_id'] . "'");
+          if (tep_db_num_rows($file_check) === 0) {
+            tep_db_query("delete from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_TO_FILES . " where download_groups_file_id = '" . $file_array['download_groups_file_id'] . "'");
+          }
+        }
+        tep_db_query("delete from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . " where download_group_id = '" . (int)$filegroup_id . "'");
+
+        tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
+        break;
+      case 'delete_file_from_group':
+        $filegroup_id = tep_db_prepare_input($HTTP_GET_VARS['filegroup_id']);
+        $file_id = tep_db_prepare_input($HTTP_GET_VARS['group_file_id']);
+
+        tep_db_query("delete from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . "
+                      where download_group_id = '" . (int)$filegroup_id . "'
+                      and download_groups_file_id = '" . (int)$file_id . "'");
+        // check files in other group
+        $file_check = tep_db_query("select download_groups_file_id from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . "
+                                    where download_group_id != '" . (int)$filegroup_id . "'
+                                    and download_groups_file_id = '" . (int)$file_id . "'");
+        if (tep_db_num_rows($file_check) === 0) {
+          tep_db_query("delete from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_TO_FILES . " where download_groups_file_id = '" . (int)$file_id . "'");
+        }
+
+        tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
+        break;
+      case 'delete_file_all_groups':
+        $file_id = tep_db_prepare_input($HTTP_GET_VARS['group_file_id']);
+
+        tep_db_query("delete from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES . "
+                      where download_groups_file_id = '" . (int)$file_id . "'");
+        tep_db_query("delete from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_TO_FILES . " where download_groups_file_id = '" . (int)$file_id . "'");
+
+        tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
+        break;
+// EOF Super Download Shop v1.0 mod
       case 'update_option_name':
         $option_name_array = $HTTP_POST_VARS['option_name'];
         $option_id = tep_db_prepare_input($HTTP_POST_VARS['option_id']);
@@ -114,9 +274,19 @@
           $products_attributes_maxdays = tep_db_prepare_input($HTTP_POST_VARS['products_attributes_maxdays']);
           $products_attributes_maxcount = tep_db_prepare_input($HTTP_POST_VARS['products_attributes_maxcount']);
 
-          if (tep_not_null($products_attributes_filename)) {
+// BOF Super Download Shop v1.0 mod
+          if (DOWNLOADS_CONTROLLER_FILEGROUP_STATUS == 'Yes') {
+            $product_attribute_filegroup_id = tep_db_prepare_input($HTTP_POST_VARS['filegroup_id']);
+            if ($product_attribute_filegroup_id > 0) {
+              $products_attributes_filename = 'Group_Files-' . $product_attribute_filegroup_id;
+            } else {
+              if (strstr($products_attributes_filename, 'Group_Files-')) $products_attributes_filename = 'File_Not_Assigned';
+            }
+            tep_db_query("replace into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD . " set products_attributes_id = '" . (int)$attribute_id . "', products_attributes_filename = '" . tep_db_input($products_attributes_filename) . "', products_attributes_filegroup_id = '" . tep_db_input($product_attribute_filegroup_id) . "', products_attributes_maxdays = '" . tep_db_input($products_attributes_maxdays) . "', products_attributes_maxcount = '" . tep_db_input($products_attributes_maxcount) . "'");
+          } else if (tep_not_null($products_attributes_filename)) {
             tep_db_query("replace into " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD . " set products_attributes_id = '" . (int)$attribute_id . "', products_attributes_filename = '" . tep_db_input($products_attributes_filename) . "', products_attributes_maxdays = '" . tep_db_input($products_attributes_maxdays) . "', products_attributes_maxcount = '" . tep_db_input($products_attributes_maxcount) . "'");
           }
+// EOF Super Download Shop v1.0 mod
         }
 
         tep_redirect(tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info));
@@ -152,8 +322,19 @@
 
   require(DIR_WS_INCLUDES . 'template_top.php');
 ?>
-
-    <table border="0" width="100%" cellspacing="0" cellpadding="0">
+ 
+<script language="javascript"><!--
+function go_option() {
+  if (document.option_order_by.selected.options[document.option_order_by.selected.selectedIndex].value != "none") {
+    location = "<?php echo tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'option_page=' . ($HTTP_GET_VARS['option_page'] ? $HTTP_GET_VARS['option_page'] : 1)); ?>&option_order_by="+document.option_order_by.selected.options[document.option_order_by.selected.selectedIndex].value;
+  }
+}
+//--></script>
+<table border="0" width="100%" cellspacing="2" cellpadding="2">
+  <tr>
+    
+<!-- body_text //-->
+    <td width="100%" valign="top"><table border="0" width="100%" cellspacing="0" cellpadding="0">
 <!-- options and values//-->
       <tr>
         <td width="100%"><table width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -167,6 +348,7 @@
 ?>
               <tr>
                 <td class="pageHeading">&nbsp;<?php echo $options_values['products_options_name']; ?>&nbsp;</td>
+                <td>&nbsp;<?php echo tep_image(DIR_WS_IMAGES . 'pixel_trans.gif', '', '1', '53'); ?>&nbsp;</td>
               </tr>
               <tr>
                 <td><table border="0" width="100%" cellspacing="0" cellpadding="2">
@@ -202,19 +384,19 @@
                     <td colspan="3"><?php echo tep_black_line(); ?></td>
                   </tr>
                   <tr>
-                    <td colspan="3" class="main"><br /><?php echo TEXT_WARNING_OF_DELETE; ?></td>
+                    <td colspan="3" class="main"><br><?php echo TEXT_WARNING_OF_DELETE; ?></td>
                   </tr>
                   <tr>
-                    <td align="right" colspan="3" class="smallText"><br /><?php echo tep_draw_button(IMAGE_BACK, 'triangle-1-w', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL')); ?>&nbsp;</td>
+                    <td align="right" colspan="3" class="main"><br><?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_cancel.gif', ' cancel '); ?></a>&nbsp;</td>
                   </tr>
 <?php
     } else {
 ?>
                   <tr>
-                    <td class="main" colspan="3"><br /><?php echo TEXT_OK_TO_DELETE; ?></td>
+                    <td class="main" colspan="3"><br><?php echo TEXT_OK_TO_DELETE; ?></td>
                   </tr>
                   <tr>
-                    <td class="smallText" align="right" colspan="3"><br /><?php echo tep_draw_button(IMAGE_DELETE, 'trash', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_option&option_id=' . $HTTP_GET_VARS['option_id'] . '&' . $page_info, 'NONSSL'), 'primary') . tep_draw_button(IMAGE_CANCEL, 'close', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL')); ?>&nbsp;</td>
+                    <td class="main" align="right" colspan="3"><br><?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_option&option_id=' . $HTTP_GET_VARS['option_id'] . '&' . $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_delete.gif', ' delete '); ?></a>&nbsp;&nbsp;&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_cancel.gif', ' cancel '); ?></a>&nbsp;</td>
                   </tr>
 <?php
     }
@@ -223,6 +405,11 @@
               </tr>
 <?php
   } else {
+    if (isset($HTTP_GET_VARS['option_order_by'])) {
+      $option_order_by = $HTTP_GET_VARS['option_order_by'];
+    } else {
+      $option_order_by = 'products_options_id';
+    }
 ?>
               <tr>
                 <td colspan="3" class="pageHeading">&nbsp;<?php echo HEADING_TITLE_OPT; ?>&nbsp;</td>
@@ -263,19 +450,19 @@
         for ($i = 0, $n = sizeof($languages); $i < $n; $i ++) {
           $option_name = tep_db_query("select products_options_name from " . TABLE_PRODUCTS_OPTIONS . " where products_options_id = '" . $options_values['products_options_id'] . "' and language_id = '" . $languages[$i]['id'] . "'");
           $option_name = tep_db_fetch_array($option_name);
-          $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="option_name[' . $languages[$i]['id'] . ']" size="20" value="' . $option_name['products_options_name'] . '">&nbsp;<br />';
+          $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="option_name[' . $languages[$i]['id'] . ']" size="20" value="' . $option_name['products_options_name'] . '">&nbsp;<br>';
         }
 ?>
                 <td align="center" class="smallText">&nbsp;<?php echo $options_values['products_options_id']; ?><input type="hidden" name="option_id" value="<?php echo $options_values['products_options_id']; ?>">&nbsp;</td>
                 <td class="smallText"><?php echo $inputs; ?></td>
-                <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_SAVE, 'disk', null, 'primary') . tep_draw_button(IMAGE_CANCEL, 'close', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL')); ?>&nbsp;</td>
+                <td align="center" class="smallText">&nbsp;<?php echo tep_image_submit('button_update.gif', IMAGE_UPDATE); ?>&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_cancel.gif', IMAGE_CANCEL); ?></a>&nbsp;</td>
 <?php
         echo '</form>' . "\n";
       } else {
 ?>
                 <td align="center" class="smallText">&nbsp;<?php echo $options_values["products_options_id"]; ?>&nbsp;</td>
                 <td class="smallText">&nbsp;<?php echo $options_values["products_options_name"]; ?>&nbsp;</td>
-                <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_EDIT, 'document', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=update_option&option_id=' . $options_values['products_options_id'] . '&' . $page_info, 'NONSSL')) . tep_draw_button(IMAGE_DELETE, 'trash', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_product_option&option_id=' . $options_values['products_options_id'] . '&' . $page_info, 'NONSSL')); ?>&nbsp;</td>
+                <td align="center" class="smallText">&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=update_option&option_id=' . $options_values['products_options_id'] . '&' . $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_edit.gif', IMAGE_UPDATE); ?></a>&nbsp;&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_product_option&option_id=' . $options_values['products_options_id'] . '&' . $page_info, 'NONSSL') , '">'; ?><?php echo tep_image_button('button_delete.gif', IMAGE_DELETE); ?></a>&nbsp;</td>
 <?php
       }
 ?>
@@ -297,12 +484,12 @@
       echo '<form name="options" action="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=add_product_options&' . $page_info, 'NONSSL') . '" method="post"><input type="hidden" name="products_options_id" value="' . $next_id . '">';
       $inputs = '';
       for ($i = 0, $n = sizeof($languages); $i < $n; $i ++) {
-        $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="option_name[' . $languages[$i]['id'] . ']" size="20">&nbsp;<br />';
+        $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="option_name[' . $languages[$i]['id'] . ']" size="20">&nbsp;<br>';
       }
 ?>
                 <td align="center" class="smallText">&nbsp;<?php echo $next_id; ?>&nbsp;</td>
                 <td class="smallText"><?php echo $inputs; ?></td>
-                <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_INSERT, 'plus'); ?>&nbsp;</td>
+                <td align="center" class="smallText">&nbsp;<?php echo tep_image_submit('button_insert.gif', IMAGE_INSERT); ?>&nbsp;</td>
 <?php
       echo '</form>';
 ?>
@@ -325,6 +512,7 @@
 ?>
               <tr>
                 <td colspan="3" class="pageHeading">&nbsp;<?php echo $values_values['products_options_values_name']; ?>&nbsp;</td>
+                <td>&nbsp;<?php echo tep_image(DIR_WS_IMAGES . 'pixel_trans.gif', '', '1', '53'); ?>&nbsp;</td>
               </tr>
               <tr>
                 <td><table border="0" width="100%" cellspacing="0" cellpadding="2">
@@ -359,19 +547,19 @@
                     <td colspan="3"><?php echo tep_black_line(); ?></td>
                   </tr>
                   <tr>
-                    <td class="main" colspan="3"><br /><?php echo TEXT_WARNING_OF_DELETE; ?></td>
+                    <td class="main" colspan="3"><br><?php echo TEXT_WARNING_OF_DELETE; ?></td>
                   </tr>
                   <tr>
-                    <td class="smallText" align="right" colspan="3"><br /><?php echo tep_draw_button(IMAGE_BACK, 'triangle-1-w', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL')); ?>&nbsp;</td>
+                    <td class="main" align="right" colspan="3"><br><?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_cancel.gif', ' cancel '); ?></a>&nbsp;</td>
                   </tr>
 <?php
     } else {
 ?>
                   <tr>
-                    <td class="main" colspan="3"><br /><?php echo TEXT_OK_TO_DELETE; ?></td>
+                    <td class="main" colspan="3"><br><?php echo TEXT_OK_TO_DELETE; ?></td>
                   </tr>
                   <tr>
-                    <td class="smallText" align="right" colspan="3"><br /><?php echo tep_draw_button(IMAGE_DELETE, 'trash', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_value&value_id=' . $HTTP_GET_VARS['value_id'] . '&' . $page_info, 'NONSSL'), 'primary') . tep_draw_button(IMAGE_CANCEL, 'close', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL')); ?>&nbsp;</td>
+                    <td class="main" align="right" colspan="3"><br><?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_value&value_id=' . $HTTP_GET_VARS['value_id'] . '&' . $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_delete.gif', ' delete '); ?></a>&nbsp;&nbsp;&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_cancel.gif', ' cancel '); ?></a>&nbsp;</td>
                   </tr>
 <?php
     }
@@ -382,12 +570,14 @@
   } else {
 ?>
               <tr>
-                <td colspan="4" class="pageHeading">&nbsp;<?php echo HEADING_TITLE_VAL; ?>&nbsp;</td>
+                <td colspan="3" class="pageHeading">&nbsp;<?php echo HEADING_TITLE_VAL; ?>&nbsp;</td>
+                <td>&nbsp;<?php echo tep_image(DIR_WS_IMAGES . 'pixel_trans.gif', '', '1', '53'); ?>&nbsp;</td>
               </tr>
               <tr>
                 <td colspan="4" class="smallText" align="right">
 <?php
     $values = "select pov.products_options_values_id, pov.products_options_values_name, pov2po.products_options_id from " . TABLE_PRODUCTS_OPTIONS_VALUES . " pov left join " . TABLE_PRODUCTS_OPTIONS_VALUES_TO_PRODUCTS_OPTIONS . " pov2po on pov.products_options_values_id = pov2po.products_options_values_id where pov.language_id = '" . (int)$languages_id . "' order by pov.products_options_values_id";
+
     $values_split = new splitPageResults($value_page, MAX_ROW_LISTS_OPTIONS, $values, $values_query_numrows);
 
     echo $values_split->display_links($values_query_numrows, MAX_ROW_LISTS_OPTIONS, MAX_DISPLAY_PAGE_LINKS, $value_page, 'option_page=' . $option_page . '&attribute_page=' . $attribute_page, 'value_page');
@@ -423,7 +613,7 @@
         for ($i = 0, $n = sizeof($languages); $i < $n; $i ++) {
           $value_name = tep_db_query("select products_options_values_name from " . TABLE_PRODUCTS_OPTIONS_VALUES . " where products_options_values_id = '" . (int)$values_values['products_options_values_id'] . "' and language_id = '" . (int)$languages[$i]['id'] . "'");
           $value_name = tep_db_fetch_array($value_name);
-          $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="value_name[' . $languages[$i]['id'] . ']" size="15" value="' . $value_name['products_options_values_name'] . '">&nbsp;<br />';
+          $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="value_name[' . $languages[$i]['id'] . ']" size="15" value="' . $value_name['products_options_values_name'] . '">&nbsp;<br>';
         }
 ?>
                 <td align="center" class="smallText">&nbsp;<?php echo $values_values['products_options_values_id']; ?><input type="hidden" name="value_id" value="<?php echo $values_values['products_options_values_id']; ?>">&nbsp;</td>
@@ -440,7 +630,7 @@
 ?>
                 </select>&nbsp;</td>
                 <td class="smallText"><?php echo $inputs; ?></td>
-                <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_SAVE, 'disk', null, 'primary') . tep_draw_button(IMAGE_CANCEL, 'close', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL')); ?>&nbsp;</td>
+                <td align="center" class="smallText">&nbsp;<?php echo tep_image_submit('button_update.gif', IMAGE_UPDATE); ?>&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_cancel.gif', IMAGE_CANCEL); ?></a>&nbsp;</td>
 <?php
         echo '</form>';
       } else {
@@ -448,7 +638,7 @@
                 <td align="center" class="smallText">&nbsp;<?php echo $values_values["products_options_values_id"]; ?>&nbsp;</td>
                 <td align="center" class="smallText">&nbsp;<?php echo $options_name; ?>&nbsp;</td>
                 <td class="smallText">&nbsp;<?php echo $values_name; ?>&nbsp;</td>
-                <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_EDIT, 'document', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=update_option_value&value_id=' . $values_values['products_options_values_id'] . '&' . $page_info, 'NONSSL')) . tep_draw_button(IMAGE_DELETE, 'trash', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_option_value&value_id=' . $values_values['products_options_values_id'] . '&' . $page_info, 'NONSSL')); ?>&nbsp;</td>
+                <td align="center" class="smallText">&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=update_option_value&value_id=' . $values_values['products_options_values_id'] . '&' . $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_edit.gif', IMAGE_UPDATE); ?></a>&nbsp;&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_option_value&value_id=' . $values_values['products_options_values_id'] . '&' . $page_info, 'NONSSL') , '">'; ?><?php echo tep_image_button('button_delete.gif', IMAGE_DELETE); ?></a>&nbsp;</td>
 <?php
       }
       $max_values_id_query = tep_db_query("select max(products_options_values_id) + 1 as next_id from " . TABLE_PRODUCTS_OPTIONS_VALUES);
@@ -477,12 +667,12 @@
 
       $inputs = '';
       for ($i = 0, $n = sizeof($languages); $i < $n; $i ++) {
-        $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="value_name[' . $languages[$i]['id'] . ']" size="15">&nbsp;<br />';
+        $inputs .= $languages[$i]['code'] . ':&nbsp;<input type="text" name="value_name[' . $languages[$i]['id'] . ']" size="15">&nbsp;<br>';
       }
 ?>
                 </select>&nbsp;</td>
                 <td class="smallText"><input type="hidden" name="value_id" value="<?php echo $next_id; ?>"><?php echo $inputs; ?></td>
-                <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_INSERT, 'plus'); ?>&nbsp;</td>
+                <td align="center" class="smallText">&nbsp;<?php echo tep_image_submit('button_insert.gif', IMAGE_INSERT); ?>&nbsp;</td>
 <?php
       echo '</form>';
 ?>
@@ -499,6 +689,13 @@
         </table></td>
 <!-- option value eof //-->
       </tr> 
+<?php
+// BOF Super Download Shop v1.0 mod
+  if (DOWNLOAD_ENABLED == 'true' && DOWNLOADS_CONTROLLER_FILEGROUP_STATUS == 'Yes') {
+    require('includes/group_download.php');
+  }
+// EOF Super Download Shop v1.0 mod
+?>
 <!-- products_attributes //-->  
       <tr>
         <td class="smallText">&nbsp;</td>
@@ -507,6 +704,7 @@
         <td width="100%"><table border="0" width="100%" cellspacing="0" cellpadding="0">
           <tr>
             <td class="pageHeading">&nbsp;<?php echo HEADING_TITLE_ATRIB; ?>&nbsp;</td>
+            <td>&nbsp;<?php echo tep_image(DIR_WS_IMAGES . 'pixel_trans.gif', '', '1', '53'); ?>&nbsp;</td>
           </tr>
         </table></td>
       </tr>
@@ -518,21 +716,22 @@
     $form_action = 'add_product_attributes';
   }
 ?>
-        <td><table border="0" width="100%" cellspacing="0" cellpadding="2">
+        <td><form name="attributes" action="<?php echo tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=' . $form_action . '&option_page=' . $option_page . '&value_page=' . $value_page . '&attribute_page=' . $attribute_page); ?>" method="post"><table border="0" width="100%" cellspacing="0" cellpadding="2">
           <tr>
-            <td class="smallText" align="right">
+            <td colspan="7" class="smallText">
 <?php
+  $per_page = MAX_ROW_LISTS_OPTIONS;
   $attributes = "select pa.* from " . TABLE_PRODUCTS_ATTRIBUTES . " pa left join " . TABLE_PRODUCTS_DESCRIPTION . " pd on pa.products_id = pd.products_id and pd.language_id = '" . (int)$languages_id . "' order by pd.products_name";
   $attributes_split = new splitPageResults($attribute_page, MAX_ROW_LISTS_OPTIONS, $attributes, $attributes_query_numrows);
 
-  echo $attributes_split->display_links($attributes_query_numrows, MAX_ROW_LISTS_OPTIONS, MAX_DISPLAY_PAGE_LINKS, $attribute_page, 'option_page=' . $option_page . '&value_page=' . $value_page, 'attribute_page');
+  echo $attributes_split->display_links($attributes_query_numrows, MAX_ROW_LISTS_OPTIONS, MAX_DISPLAY_PAGE_LINKS, $attribute_page, 'option_page=' . $option_page . '&value_page=' . $value_page, 'attribute_page'); // dj: check - should use $page_info?
 ?>
             </td>
           </tr>
         </table>
         <form name="attributes" action="<?php echo tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=' . $form_action . '&' . $page_info); ?>" method="post"><table border="0" width="100%" cellspacing="0" cellpadding="2">
           <tr>
-            <td colspan="7"><?php echo tep_black_line(); ?></td>
+            <td colspan="8"><?php echo tep_black_line(); ?></td>
           </tr>
           <tr class="dataTableHeadingRow">
             <td class="dataTableHeadingContent">&nbsp;<?php echo TABLE_HEADING_ID; ?>&nbsp;</td>
@@ -541,10 +740,18 @@
             <td class="dataTableHeadingContent">&nbsp;<?php echo TABLE_HEADING_OPT_VALUE; ?>&nbsp;</td>
             <td class="dataTableHeadingContent" align="right">&nbsp;<?php echo TABLE_HEADING_OPT_PRICE; ?>&nbsp;</td>
             <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_OPT_PRICE_PREFIX; ?>&nbsp;</td>
+            
+<?php // >>>> BOF Linkmatics attributes plus edit - added next line to add sort order column ?>
+			 <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_OPT_SORT_ORDER; ?>&nbsp;</td>
             <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_ACTION; ?>&nbsp;</td>
           </tr>
           <tr>
-            <td colspan="7"><?php echo tep_black_line(); ?></td>
+<?php // >>>> EOF Linkmatics attributes plus edit ?>
+            
+            <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_ACTION; ?>&nbsp;</td>
+          </tr>
+          <tr>
+            <td colspan="8"><?php echo tep_black_line(); ?></td>
           </tr>
 <?php
   $next_id = 1;
@@ -598,9 +805,24 @@
             </select>&nbsp;</td>
             <td align="right" class="smallText">&nbsp;<input type="text" name="value_price" value="<?php echo $attributes_values['options_values_price']; ?>" size="6">&nbsp;</td>
             <td align="center" class="smallText">&nbsp;<input type="text" name="price_prefix" value="<?php echo $attributes_values['price_prefix']; ?>" size="2">&nbsp;</td>
-            <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_SAVE, 'disk', null, 'primary') . tep_draw_button(IMAGE_CANCEL, 'close', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL')); ?>&nbsp;</td>
+            <td align="center" class="smallText">&nbsp;<?php echo tep_image_submit('button_update.gif', IMAGE_UPDATE); ?>&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, '&attribute_page=' . $attribute_page, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_cancel.gif', IMAGE_CANCEL); ?></a>&nbsp;</td>
 <?php
       if (DOWNLOAD_ENABLED == 'true') {
+// BOF Super Download Shop v1.0 mod
+        if (DOWNLOADS_CONTROLLER_FILEGROUP_STATUS == 'Yes') {
+          $download_query_raw ="select products_attributes_filename, products_attributes_filegroup_id, products_attributes_maxdays, products_attributes_maxcount 
+                                from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD . " 
+                                where products_attributes_id='" . $attributes_values['products_attributes_id'] . "'";
+          $download_query = tep_db_query($download_query_raw);
+          if (tep_db_num_rows($download_query) > 0) {
+            $download = tep_db_fetch_array($download_query);
+            $products_attributes_filename = $download['products_attributes_filename'];
+            $products_attributes_filegroup_id = $download['products_attributes_filegroup_id'];
+            $products_attributes_maxdays  = $download['products_attributes_maxdays'];
+            $products_attributes_maxcount = $download['products_attributes_maxcount'];
+          }
+        } else {
+// EOF Super Download Shop v1.0 mod
         $download_query_raw ="select products_attributes_filename, products_attributes_maxdays, products_attributes_maxcount 
                               from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD . " 
                               where products_attributes_id='" . $attributes_values['products_attributes_id'] . "'";
@@ -611,13 +833,19 @@
           $products_attributes_maxdays  = $download['products_attributes_maxdays'];
           $products_attributes_maxcount = $download['products_attributes_maxcount'];
         }
+// BOF Super Download Shop v1.0 mod
+        }
+// EOF Super Download Shop v1.0 mod
 ?>
           <tr class="<?php echo (!($rows % 2)? 'attributes-even' : 'attributes-odd');?>">
             <td>&nbsp;</td>
             <td colspan="5">
               <table>
                 <tr class="<?php echo (!($rows % 2)? 'attributes-even' : 'attributes-odd');?>">
-                  <td class="dataTableHeadingContent"><?php echo TABLE_HEADING_DOWNLOAD; ?>&nbsp;</td>
+<?php
+// BOF AlexStusio mod
+?>
+                  <td class="smallText"><b><?php echo TABLE_HEADING_DOWNLOAD; ?>&nbsp;</b></td>
                   <td class="smallText"><?php echo TABLE_TEXT_FILENAME; ?></td>
                   <td class="smallText"><?php echo tep_draw_input_field('products_attributes_filename', $products_attributes_filename, 'size="15"'); ?>&nbsp;</td>
                   <td class="smallText"><?php echo TABLE_TEXT_MAX_DAYS; ?></td>
@@ -625,6 +853,29 @@
                   <td class="smallText"><?php echo TABLE_TEXT_MAX_COUNT; ?></td>
                   <td class="smallText"><?php echo tep_draw_input_field('products_attributes_maxcount', $products_attributes_maxcount, 'size="5"'); ?>&nbsp;</td>
                 </tr>
+<?php
+        if ( DOWNLOADS_CONTROLLER_FILEGROUP_STATUS == 'Yes' ) {
+?>
+                <tr class="<?php echo (!($rows % 2)? 'attributes-even' : 'attributes-odd');?>">
+                  <td class="smallText"></td>
+                  <td class="smallText"><?php echo TABLE_TEXT_FILEGROUP; ?></td>
+                  <td class="smallText">&nbsp;<select name="filegroup_id">
+<?php
+          $file_groups_query = tep_db_query("select * from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS . " where language_id = '" . $languages_id . "' order by download_group_id");
+          while ($file_groups = tep_db_fetch_array($file_groups_query)) {
+            if ($file_groups['download_group_id'] == $products_attributes_filegroup_id) {
+              echo "\n" . '<option name="' . TEXT_OPTION_FILEGROUP . '" value="' . $file_groups['download_group_id'] . '" SELECTED>' . $file_groups['download_group_name'] . '</option>';
+            } else {
+              echo "\n" . '<option name="' . TEXT_OPTION_FILEGROUP . '" value="' . $file_groups['download_group_id'] . '">' . $file_groups['download_group_name'] . '</option>';
+            }
+          } 
+?>
+                  </select>&nbsp;</td>
+                </tr>
+<?php
+        }
+// EOF Super Download Shop v1.0 mod
+?>
               </table>
             </td>
             <td>&nbsp;</td>
@@ -635,13 +886,17 @@
 <?php
     } elseif (($action == 'delete_product_attribute') && ($HTTP_GET_VARS['attribute_id'] == $attributes_values['products_attributes_id'])) {
 ?>
-            <td class="smallText">&nbsp;<strong><?php echo $attributes_values["products_attributes_id"]; ?></strong>&nbsp;</td>
-            <td class="smallText">&nbsp;<strong><?php echo $products_name_only; ?></strong>&nbsp;</td>
-            <td class="smallText">&nbsp;<strong><?php echo $options_name; ?></strong>&nbsp;</td>
-            <td class="smallText">&nbsp;<strong><?php echo $values_name; ?></strong>&nbsp;</td>
-            <td align="right" class="smallText">&nbsp;<strong><?php echo $attributes_values["options_values_price"]; ?></strong>&nbsp;</td>
-            <td align="center" class="smallText">&nbsp;<strong><?php echo $attributes_values["price_prefix"]; ?></strong>&nbsp;</td>
-            <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_DELETE, 'trash', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_attribute&attribute_id=' . $HTTP_GET_VARS['attribute_id'] . '&' . $page_info), 'primary') . tep_draw_button(IMAGE_CANCEL, 'close', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL')); ?>&nbsp;</td>
+            <td class="smallText">&nbsp;<b><?php echo $attributes_values["products_attributes_id"]; ?></b>&nbsp;</td>
+            <td class="smallText">&nbsp;<b><?php echo $products_name_only; ?></b>&nbsp;</td>
+            <td class="smallText">&nbsp;<b><?php echo $options_name; ?></b>&nbsp;</td>
+            <td class="smallText">&nbsp;<b><?php echo $values_name; ?></b>&nbsp;</td>
+            <td align="right" class="smallText">&nbsp;<b><?php echo $attributes_values["options_values_price"]; ?></b>&nbsp;</td>
+            <td align="center" class="smallText">&nbsp;<b><?php echo $attributes_values["price_prefix"]; ?></b>&nbsp;</td>
+            
+<?php // >>>> BOF <<<< EOF Linkmatics attributes sets plus edit - added next line to add sort order column ?>
+				 		<td align="center" class="smallText">&nbsp;<b><?php echo $attributes_values["sort_order"]; ?></b>&nbsp;</td>
+				 		
+            <td align="center" class="smallText">&nbsp;<b><?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_attribute&attribute_id=' . $HTTP_GET_VARS['attribute_id'] . '&' . $page_info) . '">'; ?><?php echo tep_image_button('button_confirm.gif', IMAGE_CONFIRM); ?></a>&nbsp;&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_cancel.gif', IMAGE_CANCEL); ?></a>&nbsp;</b></td>
 <?php
     } else {
 ?>
@@ -651,7 +906,11 @@
             <td class="smallText">&nbsp;<?php echo $values_name; ?>&nbsp;</td>
             <td align="right" class="smallText">&nbsp;<?php echo $attributes_values["options_values_price"]; ?>&nbsp;</td>
             <td align="center" class="smallText">&nbsp;<?php echo $attributes_values["price_prefix"]; ?>&nbsp;</td>
-            <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_EDIT, 'document', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=update_attribute&attribute_id=' . $attributes_values['products_attributes_id'] . '&' . $page_info, 'NONSSL')) . tep_draw_button(IMAGE_DELETE, 'trash', tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_product_attribute&attribute_id=' . $attributes_values['products_attributes_id'] . '&' . $page_info, 'NONSSL')); ?>&nbsp;</td>
+            
+<?php // >>>> BOF <<<< EOF Linkmatics attributes sets plus edit - added next line to add sort order column ?>
+				 		<td align="center" class="smallText">&nbsp;<?php echo $attributes_values["sort_order"]; ?>&nbsp;</td>
+				 		            
+            <td align="center" class="smallText">&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=update_attribute&attribute_id=' . $attributes_values['products_attributes_id'] . '&' . $page_info, 'NONSSL') . '">'; ?><?php echo tep_image_button('button_edit.gif', IMAGE_UPDATE); ?></a>&nbsp;&nbsp;<?php echo '<a href="' . tep_href_link(FILENAME_PRODUCTS_ATTRIBUTES, 'action=delete_product_attribute&attribute_id=' . $attributes_values['products_attributes_id'] . '&' . $page_info, 'NONSSL') , '">'; ?><?php echo tep_image_button('button_delete.gif', IMAGE_DELETE); ?></a>&nbsp;</td>
 <?php
     }
     $max_attributes_id_query = tep_db_query("select max(products_attributes_id) + 1 as next_id from " . TABLE_PRODUCTS_ATTRIBUTES);
@@ -664,7 +923,7 @@
   if ($action != 'update_attribute') {
 ?>
           <tr>
-            <td colspan="7"><?php echo tep_black_line(); ?></td>
+            <td colspan="8"><?php echo tep_black_line(); ?></td>
           </tr>
           <tr class="<?php echo (floor($rows/2) == ($rows/2) ? 'attributes-even' : 'attributes-odd'); ?>">
             <td class="smallText">&nbsp;<?php echo $next_id; ?>&nbsp;</td>
@@ -694,7 +953,11 @@
             </select>&nbsp;</td>
             <td align="right" class="smallText">&nbsp;<input type="text" name="value_price" size="6">&nbsp;</td>
             <td align="right" class="smallText">&nbsp;<input type="text" name="price_prefix" size="2" value="+">&nbsp;</td>
-            <td align="center" class="smallText">&nbsp;<?php echo tep_draw_button(IMAGE_INSERT, 'plus'); ?>&nbsp;</td>
+            
+<?php // >>>> BOF <<<< EOF Linkmatics attributes sets plus edit - added next line to add sort order column ?>			
+				 		<td align="right" class="smallText">&nbsp;<input type="text" name="sort_order" size="3" value="0">&nbsp;</td>
+				 		            
+            <td align="center" class="smallText">&nbsp;<?php echo tep_image_submit('button_insert.gif', IMAGE_INSERT); ?>&nbsp;</td>
           </tr>
 <?php
       if (DOWNLOAD_ENABLED == 'true') {
@@ -706,7 +969,10 @@
             <td colspan="5">
               <table>
                 <tr class="<?php echo (!($rows % 2)? 'attributes-even' : 'attributes-odd');?>">
-                  <td class="dataTableHeadingContent"><?php echo TABLE_HEADING_DOWNLOAD; ?>&nbsp;</td>
+<?php
+// BOF AlexStusio mod
+?>
+                  <td class="smallText"><b><?php echo TABLE_HEADING_DOWNLOAD; ?>&nbsp;</b></td>
                   <td class="smallText"><?php echo TABLE_TEXT_FILENAME; ?></td>
                   <td class="smallText"><?php echo tep_draw_input_field('products_attributes_filename', $products_attributes_filename, 'size="15"'); ?>&nbsp;</td>
                   <td class="smallText"><?php echo TABLE_TEXT_MAX_DAYS; ?></td>
@@ -714,6 +980,25 @@
                   <td class="smallText"><?php echo TABLE_TEXT_MAX_COUNT; ?></td>
                   <td class="smallText"><?php echo tep_draw_input_field('products_attributes_maxcount', $products_attributes_maxcount, 'size="5"'); ?>&nbsp;</td>
                 </tr>
+<?php
+        if ( DOWNLOADS_CONTROLLER_FILEGROUP_STATUS == 'Yes' ) {
+?>
+                <tr class="<?php echo (!($rows % 2)? 'attributes-even' : 'attributes-odd');?>">
+                  <td class="smallText"></td>
+                  <td class="smallText"><?php echo TABLE_TEXT_FILEGROUP; ?></td>
+                  <td class="smallText">&nbsp;<select name="filegroup_id">
+<?php
+          $file_groups_query = tep_db_query("select * from " . TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS . " where language_id = '" . (int)$languages_id . "' order by download_group_id");
+          while ($file_groups = tep_db_fetch_array($file_groups_query)) {
+            echo '<option name="' . TEXT_OPTION_FILEGROUP . '" value="' . $file_groups['download_group_id'] . '">' . $file_groups['download_group_name'] . '</option>';
+          } 
+?>
+                  </select>&nbsp;</td>
+                </tr>
+<?php
+        }
+// EOF Super Download Shop v1.0 mod
+?>
               </table>
             </td>
             <td>&nbsp;</td>
@@ -725,12 +1010,15 @@
   }
 ?>
           <tr>
-            <td colspan="7"><?php echo tep_black_line(); ?></td>
+            <td colspan="8"><?php echo tep_black_line(); ?></td>
           </tr>
         </table></form></td>
       </tr>
-    </table>
-
+    </table></td>
+<!-- products_attributes_eof //-->
+  </tr>
+</table>
+<!-- body_text_eof //-->
 <?php
   require(DIR_WS_INCLUDES . 'template_bottom.php');
   require(DIR_WS_INCLUDES . 'application_bottom.php');
