@@ -25,6 +25,17 @@
   }
 
   $action = (isset($HTTP_GET_VARS['action']) ? $HTTP_GET_VARS['action'] : '');
+// BOF: WebMakers.com Added: Downloads Controller
+if($HTTP_GET_VARS['listing']=="customers") { $sort_by = "o.customers_name"; }
+elseif($HTTP_GET_VARS['listing']=="customers-desc") { $sort_by = "o.customers_name DESC"; }
+elseif($HTTP_GET_VARS['listing']=="ottotal") { $sort_by = "order_total"; }
+elseif($HTTP_GET_VARS['listing']=="ottotal-desc") { $sort_by = "order_total DESC"; }
+elseif($HTTP_GET_VARS['listing']=="id-asc") { $sort_by = "o.orders_id"; }
+elseif($HTTP_GET_VARS['listing']=="id-desc") { $sort_by = "o.orders_id DESC"; }
+elseif($HTTP_GET_VARS['listing']=="status-asc") { $sort_by = "o.orders_status"; }
+elseif($HTTP_GET_VARS['listing']=="status-desc") { $sort_by = "o.orders_status DESC"; }
+else { $sort_by = "o.orders_id DESC"; }
+// EOF: WebMakers.com Added: Downloads Controller
 
   if (tep_not_null($action)) {
     switch ($action) {
@@ -37,8 +48,18 @@
         $check_status_query = tep_db_query("select customers_name, customers_email_address, orders_status, date_purchased from " . TABLE_ORDERS . " where orders_id = '" . (int)$oID . "'");
         $check_status = tep_db_fetch_array($check_status_query);
 
-        if ( ($check_status['orders_status'] != $status) || tep_not_null($comments)) {
+ // BOF: WebMakers.com Added: Downloads Controller
+// always update date and time on order_status
+        if ( ($check_status['orders_status'] != $status) || $comments != '' || ($status == DOWNLOADS_ORDERS_STATUS_UPDATED_VALUE) ) {
+// EOF: WebMakers.com Added: Downloads Controller
           tep_db_query("update " . TABLE_ORDERS . " set orders_status = '" . tep_db_input($status) . "', last_modified = now() where orders_id = '" . (int)$oID . "'");
+// BOF: WebMakers.com Added: Downloads Controller
+          $check_status_query2 = tep_db_query("select customers_name, customers_email_address, orders_status, date_purchased from " . TABLE_ORDERS . " where orders_id = '" . (int)$oID . "'");
+          $check_status2 = tep_db_fetch_array($check_status_query2);
+          if ( $check_status2['orders_status'] == DOWNLOADS_ORDERS_STATUS_UPDATED_VALUE ) {
+            tep_db_query("update " . TABLE_ORDERS_PRODUCTS_DOWNLOAD . " set download_maxdays = '" . DOWNLOAD_MAX_DAYS . "', download_count = '" . DOWNLOAD_MAX_COUNT . "' where orders_id = '" . (int)$oID . "'");
+          }
+// EOF: WebMakers.com Added: Downloads Controller
 
           $customer_notified = '0';
           if (isset($HTTP_POST_VARS['notify']) && ($HTTP_POST_VARS['notify'] == 'on')) {
@@ -150,6 +171,22 @@
       </tr>
       <tr>
         <td><table border="0" cellspacing="0" cellpadding="2">
+		<?php
+// BOF: WebMakers.com Added: Show Order Info
+?>
+<!-- add Order # // -->
+<tr>
+<td class="main"><b>Order # </b></td>
+<td class="main"><?php echo tep_db_input($oID); ?></td>
+</tr>
+<!-- add date/time // -->
+<tr>
+<td class="main"><b>Order Date & Time</b></td>
+<td class="main"><?php echo tep_datetime_short($order->info['date_purchased']); ?></td>
+</tr>
+<?php
+// EOF: WebMakers.com Added: Show Order Info
+?>
           <tr>
             <td class="main"><strong><?php echo ENTRY_PAYMENT_METHOD; ?></strong></td>
             <td class="main"><?php echo $order->info['payment_method']; ?></td>
@@ -320,21 +357,33 @@
           <tr>
             <td valign="top"><table border="0" width="100%" cellspacing="0" cellpadding="2">
               <tr class="dataTableHeadingRow">
-                <td class="dataTableHeadingContent"><?php echo TABLE_HEADING_CUSTOMERS; ?></td>
-                <td class="dataTableHeadingContent" align="right"><?php echo TABLE_HEADING_ORDER_TOTAL; ?></td>
-                <td class="dataTableHeadingContent" align="center"><?php echo TABLE_HEADING_DATE_PURCHASED; ?></td>
-                <td class="dataTableHeadingContent" align="right"><?php echo TABLE_HEADING_STATUS; ?></td>
-                <td class="dataTableHeadingContent" align="right"><?php echo TABLE_HEADING_ACTION; ?>&nbsp;</td>
+<?php
+// BOF: WebMakers.com modified : arrange sort order
+?>
+                <td class="dataTableHeadingContent"><a href="<?php echo "$PHP_SELF?listing=customers"; ?>"><?php echo tep_image_button('ic_up.gif', ' Sort ' . TABLE_HEADING_CUSTOMERS . ' --> A-B-C From Top '); ?></a>&nbsp;<a href="<?php echo "$PHP_SELF?listing=customers-desc"; ?>"><?php echo tep_image_button('ic_down.gif', ' Sort ' . TABLE_HEADING_CUSTOMERS . ' --> Z-X-Y From Top '); ?></a><br><?php echo TABLE_HEADING_CUSTOMERS; ?></td>
+                <td class="dataTableHeadingContent" align="right"><a href="<?php echo "$PHP_SELF?listing=ottotal"; ?>"><?php echo tep_image_button('ic_up.gif', ' Sort ' . TABLE_HEADING_ORDER_TOTAL . ' --> 1-2-3 From Top '); ?></a>&nbsp;<a href="<?php echo "$PHP_SELF?listing=ottotal-desc"; ?>"><?php echo tep_image_button('ic_down.gif', ' Sort ' . TABLE_HEADING_ORDER_TOTAL . ' --> 3-2-1 From Top '); ?></a><br><?php echo TABLE_HEADING_ORDER_TOTAL; ?></td>
+                <td class="dataTableHeadingContent" align="center"><a href="<?php echo "$PHP_SELF?listing=id-asc"; ?>"><?php echo tep_image_button('ic_up.gif', ' Sort ' . TABLE_HEADING_DATE_PURCHASED . ' --> 1-2-3 From Top '); ?></a>&nbsp;<a href="<?php echo "$PHP_SELF?listing=id-desc"; ?>"><?php echo tep_image_button('ic_down.gif', ' Sort ' . TABLE_HEADING_DATE_PURCHASED . ' --> 3-2-1 From Top '); ?></a><br><?php echo TABLE_HEADING_DATE_PURCHASED; ?></td>
+                <td class="dataTableHeadingContent" align="right"><a href="<?php echo "$PHP_SELF?listing=status-asc"; ?>"><?php echo tep_image_button('ic_up.gif', ' Sort ' . TABLE_HEADING_STATUS . ' --> 1-2-3 From Top '); ?></a>&nbsp;<a href="<?php echo "$PHP_SELF?listing=status-desc"; ?>"><?php echo tep_image_button('ic_down.gif', ' Sort ' . TABLE_HEADING_STATUS . ' --> 3-2-1 From Top '); ?></a><br><?php echo TABLE_HEADING_STATUS; ?></td>
+                <td class="dataTableHeadingContent" align="right"><br><?php echo TABLE_HEADING_ACTION; ?>&nbsp;</td>
+<?php
+// EOF: WebMakers.com modified : arrange sort order
+?>
               </tr>
 <?php
     if (isset($HTTP_GET_VARS['cID'])) {
       $cID = tep_db_prepare_input($HTTP_GET_VARS['cID']);
-      $orders_query_raw = "select o.orders_id, o.customers_name, o.customers_id, o.payment_method, o.date_purchased, o.last_modified, o.currency, o.currency_value, s.orders_status_name, ot.text as order_total from " . TABLE_ORDERS . " o left join " . TABLE_ORDERS_TOTAL . " ot on (o.orders_id = ot.orders_id), " . TABLE_ORDERS_STATUS . " s where o.customers_id = '" . (int)$cID . "' and o.orders_status = s.orders_status_id and s.language_id = '" . (int)$languages_id . "' and ot.class = 'ot_total' order by orders_id DESC";
+// BOF: WebMakers.com modified : arrange sort order
+      $orders_query_raw = "select o.orders_id, o.customers_name, o.customers_id, o.payment_method, o.date_purchased, o.last_modified, o.currency, o.currency_value, s.orders_status_name, ot.text as order_total from " . TABLE_ORDERS . " o left join " . TABLE_ORDERS_TOTAL . " ot on (o.orders_id = ot.orders_id), " . TABLE_ORDERS_STATUS . " s where o.customers_id = '" . (int)$cID . "' and o.orders_status = s.orders_status_id and s.language_id = '" . (int)$languages_id . "' and ot.class = 'ot_total' order by " . $sort_by;
+// EOF: WebMakers.com modified : arrange sort order
     } elseif (isset($HTTP_GET_VARS['status']) && is_numeric($HTTP_GET_VARS['status']) && ($HTTP_GET_VARS['status'] > 0)) {
       $status = tep_db_prepare_input($HTTP_GET_VARS['status']);
-      $orders_query_raw = "select o.orders_id, o.customers_name, o.payment_method, o.date_purchased, o.last_modified, o.currency, o.currency_value, s.orders_status_name, ot.text as order_total from " . TABLE_ORDERS . " o left join " . TABLE_ORDERS_TOTAL . " ot on (o.orders_id = ot.orders_id), " . TABLE_ORDERS_STATUS . " s where o.orders_status = s.orders_status_id and s.language_id = '" . (int)$languages_id . "' and s.orders_status_id = '" . (int)$status . "' and ot.class = 'ot_total' order by o.orders_id DESC";
+// BOF: WebMakers.com modified : arrange sort order
+      $orders_query_raw = "select o.orders_id, o.customers_name, o.payment_method, o.date_purchased, o.last_modified, o.currency, o.currency_value, s.orders_status_name, ot.text as order_total from " . TABLE_ORDERS . " o left join " . TABLE_ORDERS_TOTAL . " ot on (o.orders_id = ot.orders_id), " . TABLE_ORDERS_STATUS . " s where o.orders_status = s.orders_status_id and s.language_id = '" . (int)$languages_id . "' and s.orders_status_id = '" . (int)$status . "' and ot.class = 'ot_total' order by " . $sort_by;
+// EOF: WebMakers.com modified : arrange sort order
     } else {
-      $orders_query_raw = "select o.orders_id, o.customers_name, o.payment_method, o.date_purchased, o.last_modified, o.currency, o.currency_value, s.orders_status_name, ot.text as order_total from " . TABLE_ORDERS . " o left join " . TABLE_ORDERS_TOTAL . " ot on (o.orders_id = ot.orders_id), " . TABLE_ORDERS_STATUS . " s where o.orders_status = s.orders_status_id and s.language_id = '" . (int)$languages_id . "' and ot.class = 'ot_total' order by o.orders_id DESC";
+// BOF: WebMakers.com modified : arrange sort order
+      $orders_query_raw = "select o.orders_id, o.customers_name, o.payment_method, o.date_purchased, o.last_modified, o.currency, o.currency_value, s.orders_status_name, ot.text as order_total from " . TABLE_ORDERS . " o left join " . TABLE_ORDERS_TOTAL . " ot on (o.orders_id = ot.orders_id), " . TABLE_ORDERS_STATUS . " s where o.orders_status = s.orders_status_id and s.language_id = '" . (int)$languages_id . "' and ot.class = 'ot_total' order by " . $sort_by;
+// EOF: WebMakers.com modified : arrange sort order
     }
     $orders_split = new splitPageResults($HTTP_GET_VARS['page'], MAX_DISPLAY_SEARCH_RESULTS, $orders_query_raw, $orders_query_numrows);
     $orders_query = tep_db_query($orders_query_raw);
