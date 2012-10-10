@@ -24,7 +24,7 @@
   $order_by = (isset($HTTP_GET_VARS['order_by']) && is_string($HTTP_GET_VARS['order_by'])) ? $HTTP_GET_VARS['order_by'] : '';
 
   $page_info = 'option_page=' . $option_page . '&value_page=' . $value_page . '&attribute_page=' . $attribute_page .
-    '&file_group_page=' . $file_group_page . '&group_file_page=' . $group_file_page . '&order_by=' . $order_by; // dl: added parms for file_group
+    '&file_group_page=' . $file_group_page . '&group_file_page=' . $group_file_page . '&order_by' . $order_by; // dl: added parms for file_group
 
   if (tep_not_null($action)) {
     switch ($action) {
@@ -348,6 +348,7 @@ function go_option() {
 ?>
               <tr>
                 <td class="pageHeading">&nbsp;<?php echo $options_values['products_options_name']; ?>&nbsp;</td>
+                <td>&nbsp;<?php echo tep_image(DIR_WS_IMAGES . 'pixel_trans.gif', '', '1', '53'); ?>&nbsp;</td>
               </tr>
               <tr>
                 <td><table border="0" width="100%" cellspacing="0" cellpadding="2">
@@ -511,6 +512,7 @@ function go_option() {
 ?>
               <tr>
                 <td colspan="3" class="pageHeading">&nbsp;<?php echo $values_values['products_options_values_name']; ?>&nbsp;</td>
+                <td>&nbsp;<?php echo tep_image(DIR_WS_IMAGES . 'pixel_trans.gif', '', '1', '53'); ?>&nbsp;</td>
               </tr>
               <tr>
                 <td><table border="0" width="100%" cellspacing="0" cellpadding="2">
@@ -569,6 +571,7 @@ function go_option() {
 ?>
               <tr>
                 <td colspan="3" class="pageHeading">&nbsp;<?php echo HEADING_TITLE_VAL; ?>&nbsp;</td>
+                <td>&nbsp;<?php echo tep_image(DIR_WS_IMAGES . 'pixel_trans.gif', '', '1', '53'); ?>&nbsp;</td>
               </tr>
               <tr>
                 <td colspan="4" class="smallText" align="right">
@@ -689,7 +692,7 @@ function go_option() {
 <?php
 // BOF Super Download Shop v1.0 mod
   if (DOWNLOAD_ENABLED == 'true' && DOWNLOADS_CONTROLLER_FILEGROUP_STATUS == 'Yes') {
-    require(DIR_WS_INCLUDES . 'group_download.php');
+    require('includes/group_download.php');
   }
 // EOF Super Download Shop v1.0 mod
 ?>
@@ -701,6 +704,7 @@ function go_option() {
         <td width="100%"><table border="0" width="100%" cellspacing="0" cellpadding="0">
           <tr>
             <td class="pageHeading">&nbsp;<?php echo HEADING_TITLE_ATRIB; ?>&nbsp;</td>
+            <td>&nbsp;<?php echo tep_image(DIR_WS_IMAGES . 'pixel_trans.gif', '', '1', '53'); ?>&nbsp;</td>
           </tr>
         </table></td>
       </tr>
@@ -741,7 +745,11 @@ function go_option() {
 			 <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_OPT_SORT_ORDER; ?>&nbsp;</td>
             <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_ACTION; ?>&nbsp;</td>
           </tr>
+          <tr>
 <?php // >>>> EOF Linkmatics attributes plus edit ?>
+            
+            <td class="dataTableHeadingContent" align="center">&nbsp;<?php echo TABLE_HEADING_ACTION; ?>&nbsp;</td>
+          </tr>
           <tr>
             <td colspan="8"><?php echo tep_black_line(); ?></td>
           </tr>
