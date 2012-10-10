@@ -1,6 +1,5 @@
 
 *.DS_Store
 
-admin/includes/configure.php
-
-includes/configure.php
+includes/local/configure.php
+admin/includes/local/configure.php
