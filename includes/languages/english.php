@@ -183,7 +183,7 @@ define('PREVNEXT_BUTTON_FIRST', '&lt;&lt;FIRST');
 define('PREVNEXT_BUTTON_PREV', '[&lt;&lt;&nbsp;Prev]');
 define('PREVNEXT_BUTTON_NEXT', '[Next&nbsp;&gt;&gt;]');
 define('PREVNEXT_BUTTON_LAST', 'LAST&gt;&gt;');
-define('IMAGE_BUTTON_DOWNLOAD', 'Download Now!');
+
 define('IMAGE_BUTTON_ADD_ADDRESS', 'Add Address');
 define('IMAGE_BUTTON_ADDRESS_BOOK', 'Address Book');
 define('IMAGE_BUTTON_BACK', 'Back');
@@ -194,7 +194,6 @@ define('IMAGE_BUTTON_CONFIRM_ORDER', 'Confirm Order');
 define('IMAGE_BUTTON_CONTINUE', 'Continue');
 define('IMAGE_BUTTON_CONTINUE_SHOPPING', 'Continue Shopping');
 define('IMAGE_BUTTON_DELETE', 'Delete');
-
 define('IMAGE_BUTTON_EDIT_ACCOUNT', 'Edit Account');
 define('IMAGE_BUTTON_HISTORY', 'Order History');
 define('IMAGE_BUTTON_LOGIN', 'Sign In');
