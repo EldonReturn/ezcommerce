@@ -19,6 +19,7 @@
 ?>
               <tr>
                 <td class="pageHeading">&nbsp;<?php echo $filegroup_array['download_group_name']; ?>&nbsp;</td>
+                <td>&nbsp;<?php echo tep_image(DIR_WS_IMAGES . 'pixel_trans.gif', '', '1', '53'); ?>&nbsp;</td>
               </tr>
               <tr>
                 <td><table border="0" width="100%" cellspacing="0" cellpadding="2">
