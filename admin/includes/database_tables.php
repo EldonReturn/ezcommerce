@@ -59,4 +59,9 @@
   define('TABLE_ZONES_TO_GEO_ZONES', 'zones_to_geo_zones');
   define('TABLE_WHOS_ONLINE', 'whos_online');
   define('TABLE_ZONES', 'zones');
+  // BOF Super Download Shop v1.0 mod
+  define('TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS', 'products_attributes_download_groups');
+  define('TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_FILES', 'products_attributes_download_groups_files');
+  define('TABLE_PRODUCTS_ATTRIBUTES_DOWNLOAD_GROUPS_TO_FILES', 'products_attributes_download_groups_to_files');
+// EOF Super Download Shop v1.0 mod
 ?>

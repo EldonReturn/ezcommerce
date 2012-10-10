@@ -20,7 +20,9 @@
   }
   
 // Check that order_id, customer_id and filename match
-  $downloads_query = tep_db_query("select date_format(o.date_purchased, '%Y-%m-%d') as date_purchased_day, opd.download_maxdays, opd.download_count, opd.download_maxdays, opd.orders_products_filename from " . TABLE_ORDERS . " o, " . TABLE_ORDERS_PRODUCTS . " op, " . TABLE_ORDERS_PRODUCTS_DOWNLOAD . " opd, " . TABLE_ORDERS_STATUS . " os where o.customers_id = '" . $customer_id . "' and o.orders_id = '" . (int)$HTTP_GET_VARS['order'] . "' and o.orders_id = op.orders_id and op.orders_products_id = opd.orders_products_id and opd.orders_products_download_id = '" . (int)$HTTP_GET_VARS['id'] . "' and opd.orders_products_filename != '' and o.orders_status = os.orders_status_id and os.downloads_flag = '1' and os.language_id = '" . (int)$languages_id . "'");
+// BOF Super Download Shop v1.1 mod
+  $downloads_query = tep_db_query("select date_format(o.last_modified, '%Y-%m-%d') as date_purchased_day, o.orders_status, opd.download_maxdays, opd.download_count, opd.download_maxdays, opd.orders_products_filename from " . TABLE_ORDERS . " o, " . TABLE_ORDERS_PRODUCTS . " op, " . TABLE_ORDERS_PRODUCTS_DOWNLOAD . " opd where o.customers_id = '" . $customer_id . "' and o.orders_id = '" . (int)$HTTP_GET_VARS['order'] . "' and o.orders_status >= " . DOWNLOADS_CONTROLLER_ORDERS_STATUS . " and o.orders_id = op.orders_id and op.orders_products_id = opd.orders_products_id and opd.orders_products_download_id = '" . (int)$HTTP_GET_VARS['id'] . "' and opd.orders_products_filename != ''");
+// EOF Super Download Shop v1.1 mod
   if (!tep_db_num_rows($downloads_query)) die;
   $downloads = tep_db_fetch_array($downloads_query);
 // MySQL 3.22 does not have INTERVAL
@@ -33,6 +35,24 @@
   if ($downloads['download_count'] <= 0) die;
 // Die if file is not there
   if (!file_exists(DIR_FS_DOWNLOAD . $downloads['orders_products_filename'])) die;
+// BOF Super Download Shop v1.1 mod
+  else {
+    $file_name = '';
+    if (strstr($downloads['orders_products_filename'], '/')) { // file in a subfolder
+      $file_dir = DIR_FS_DOWNLOAD;
+      $file_array = explode('/', $downloads['orders_products_filename']);
+      for ($i = 0; $i < count($file_array); $i++) {
+        if (is_dir($file_dir . $file_array[$i])) {
+          $file_dir .= $file_array[$i] . '/';
+        } else if (is_file($file_dir . $file_array[$i])) {
+          $file_name = $file_array[$i];
+        }
+      }
+    } else {
+      $file_name = $downloads['orders_products_filename'];
+    }
+  }
+// EOF Super Download Shop v1.1 mod
   
 // Now decrement counter
   tep_db_query("update " . TABLE_ORDERS_PRODUCTS_DOWNLOAD . " set download_count = download_count-1 where orders_products_download_id = '" . (int)$HTTP_GET_VARS['id'] . "'");
@@ -74,6 +94,27 @@ function tep_unlink_temp_dir($dir)
   closedir($h1);
 }
 
+// BOF Super Download Shop v1.1 mod
+// Download via a buffered loop, for non-redirect downloads to handle large files
+// With this function, downloads will not be limited by the server resource.
+// However, it still suffers from the maximum script execution time.
+function tep_download_buffered($filename)
+{
+  $buffersize = 1*(1024*1024); // how many bytes per chunk
+  $buffer = '';
+  $handle = fopen($filename, 'rb');
+  if ($handle === false) {
+    return false;
+  }
+  while (!feof($handle)) {
+    $buffer = fread($handle, $buffersize);
+    echo $buffer;
+    flush();
+  }
+  $status = fclose($handle);
+  return $status;
+}
+// EOF Super Download Shop v1.1 mod
 
 // Now send the file with header() magic
   header("Expires: Mon, 26 Nov 1962 00:00:00 GMT");
@@ -81,7 +122,9 @@ function tep_unlink_temp_dir($dir)
   header("Cache-Control: no-cache, must-revalidate");
   header("Pragma: no-cache");
   header("Content-Type: Application/octet-stream");
-  header("Content-disposition: attachment; filename=" . $downloads['orders_products_filename']);
+// BOF Super Download Shop v1.1 mod
+  header("Content-disposition: attachment; filename=\"" . $file_name . "\"");
+// EOF Super Download Shop v1.1 mod
 
   if (DOWNLOAD_BY_REDIRECT == 'true') {
 // This will work only on Unix/Linux hosts
@@ -89,10 +132,17 @@ function tep_unlink_temp_dir($dir)
     $tempdir = tep_random_name();
     umask(0000);
     mkdir(DIR_FS_DOWNLOAD_PUBLIC . $tempdir, 0777);
-    symlink(DIR_FS_DOWNLOAD . $downloads['orders_products_filename'], DIR_FS_DOWNLOAD_PUBLIC . $tempdir . '/' . $downloads['orders_products_filename']);
-    if (file_exists(DIR_FS_DOWNLOAD_PUBLIC . $tempdir . '/' . $downloads['orders_products_filename'])) {
-      tep_redirect(tep_href_link(DIR_WS_DOWNLOAD_PUBLIC . $tempdir . '/' . $downloads['orders_products_filename']));
-    }
+// BOF Super Download Shop v1.1 mod
+    symlink(DIR_FS_DOWNLOAD . $downloads['orders_products_filename'], DIR_FS_DOWNLOAD_PUBLIC . $tempdir . '/' . $file_name);
+    tep_redirect(DIR_WS_DOWNLOAD_PUBLIC . $tempdir . '/' . $file_name);
+// EOF Super Download Shop v1.1 mod
+  } else {
+// This will work on all systems, but will need considerable resources
+// We could also loop with fread($fp, 4096) to save memory
+// BOF Super Download Shop v1.1 mod
+    set_time_limit(0); // Prevent the script from timing out for large files
+    tep_download_buffered(DIR_FS_DOWNLOAD . $downloads['orders_products_filename']);
+// EOF Super Download Shop v1.1 mod
   }
 
 // Fallback to readfile() delivery method. This will work on all systems, but will need considerable resources
