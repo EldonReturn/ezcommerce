@@ -483,11 +483,4 @@
 // initialize the message stack for output messages
   require(DIR_WS_CLASSES . 'message_stack.php');
   $messageStack = new messageStack;
-  
-  // Log module
-  $log_path = explode(DIRECTORY_SEPARATOR, DIR_FS_CATALOG);
-  while(array_pop($log_path) == '');
-  $log_path[] = 'PROTECTED' . DIRECTORY_SEPARATOR;
-  define('LOG_PATH', implode(DIRECTORY_SEPARATOR, $log_path));
-  require(DIR_WS_CLASSES . 'simple_log.php');
 ?>
