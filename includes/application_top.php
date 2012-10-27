@@ -87,26 +87,47 @@
 
 // set the HTTP GET parameters manually if search_engine_friendly_urls is enabled
   if (SEARCH_ENGINE_FRIENDLY_URLS == 'true') {
-    if (strlen(getenv('PATH_INFO')) > 1) {
-      $GET_array = array();
-      $PHP_SELF = str_replace(getenv('PATH_INFO'), '', $PHP_SELF);
-      $vars = explode('/', substr(getenv('PATH_INFO'), 1));
-      do_magic_quotes_gpc($vars);
-      for ($i=0, $n=sizeof($vars); $i<$n; $i++) {
-        if (strpos($vars[$i], '[]')) {
-          $GET_array[substr($vars[$i], 0, -2)][] = $vars[$i+1];
-        } else {
-          $HTTP_GET_VARS[$vars[$i]] = $vars[$i+1];
-        }
-        $i++;
-      }
-
-      if (sizeof($GET_array) > 0) {
-        while (list($key, $value) = each($GET_array)) {
-          $HTTP_GET_VARS[$key] = $value;
-        }
-      }
-    }
+  	$path_info = substr($_SERVER['REQUEST_URI'], strpos($_SERVER['REQUEST_URI'], $PHP_SELF) + strlen($PHP_SELF));
+  	if(strlen($path_info) > 1 && strpos($path_info, '/') == 0 && $path_info == getenv('PATH_INFO')){
+  		$path_info_enabled = true;
+  	}
+	$GET_array = array();
+  	
+  	if($path_info_enabled){
+	    $PHP_SELF = str_replace($path_info, '', $PHP_SELF);
+  	}else{
+  		// PATH_INFO is not supported by the server
+  		// GET a PATH_INFO value first from the REQUEST_URI
+  		// The cases:
+  		// http://myserver/					path_info:'', request_uri: '/', php_self: '/index.php'
+  		// http://myserver/index.php		path_info:'', request_uri: '/index.php', php_self: '/index.php'
+  		// http://myserver/index.php/		path_info:'', request_uri: '/index.php/', php_self: '/index.php'
+  		// http://myserver/path/index.php	path_info:'', request_uri: '/path/index.php', php_self: '/path/index.php'
+  		// http://myserver/index.php?arg=1	path_info:'', request_uri: '/index.php?arg=1', php_self: '/index.php'
+  		// http://myserver/index.php/arg/1	path_info:'/arg/1', request_uri: '/index.php/arg/1', php_self: '/index.php'
+  		if(strlen($path_info) <= 1 || strpos($path_info, '?') === 0){
+  			$path_info = '';
+  		}
+  	}
+  	
+  	if(strlen($path_info) > 1){
+	  	$vars = explode('/', substr($path_info, 1));
+	  	do_magic_quotes_gpc($vars);
+	  	for ($i=0, $n=sizeof($vars); $i<$n; $i++) {
+	  		if (strpos($vars[$i], '[]')) {
+	  			$GET_array[substr($vars[$i], 0, -2)][] = $vars[$i+1];
+	  		} else {
+	  			$HTTP_GET_VARS[$vars[$i]] = $vars[$i+1];
+	  		}
+	  		$i++;
+	  	}
+	  	
+	  	if (sizeof($GET_array) > 0) {
+	  		while (list($key, $value) = each($GET_array)) {
+	  			$HTTP_GET_VARS[$key] = $value;
+	  		}
+	  	}
+	  	}
   }
 
 // define general functions used application-wide
