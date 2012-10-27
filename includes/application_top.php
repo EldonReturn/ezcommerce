@@ -127,7 +127,7 @@
 	  			$HTTP_GET_VARS[$key] = $value;
 	  		}
 	  	}
-	  	}
+	  }
   }
 
 // define general functions used application-wide
