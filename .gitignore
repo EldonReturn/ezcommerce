@@ -3,3 +3,4 @@
 
 includes/local/configure.php
 admin/includes/local/configure.php
+*.cache
